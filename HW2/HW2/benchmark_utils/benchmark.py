@@ -81,6 +81,7 @@ def main():
     with open(args.pred_path, 'r') as f:
         pred_results = json.load(f)
 
+    # evaluate on gt labels and prediction results (json-basd comparisons)
     eval_result, err_dict_all, headers, table = evaluate(gt_labels, pred_results)
     # print(eval_result)
 

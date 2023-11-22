@@ -1,258 +1,453 @@
-然后我的code：
-import java.time.LocalDateTime;
+import java.time.*;
 
-class CargoFlight implements Flight {
-    String flightNo;
-    String departureAirport;
-    String arrivalAirport;
-    String aircraftType;
+class Ticket {
+    Passenger passenger;
+    Flight flight;
+    LocalDateTime purchaseTime;
+    LocalDateTime cancelDeadline;
+    boolean purchasedWithSkyPoints;
+    boolean cancelled;
+
+    // TODO: Add row/seat fields
+    int row;
+    char seat;
+
+    Ticket(Passenger passenger, Flight flight, boolean purchasedWithSkyPoints, int row, char seat) {
+        this.passenger = passenger;
+        this.flight = flight;
+        this.purchasedWithSkyPoints = purchasedWithSkyPoints;
+
+        this.cancelled = false;
+        this.purchaseTime = LocalDateTime.now();
+        this.cancelDeadline = purchaseTime.plusDays(1);
+
+        // TODO: Initialize row/seat fields.
+        this.row = row;
+        this.seat = seat;
+    }
+
+    boolean cancel() {
+        if (this.cancelled || LocalDateTime.now().isAfter(this.cancelDeadline)) {
+            return this.cancelled;
+        }
+
+        if (this.purchasedWithSkyPoints) {
+            this.passenger.skyPoints += this.flight.costInSkyPoints();
+        } else {
+            this.passenger.cashBalance += this.flight.cost * 0.95;
+        }
+
+        // TODO: Remove ticket from seatmap.
+        this.flight.isOccupied(this.row, this.seat);
+
+        this.cancelled = true;
+        return this.cancelled;
+    }
+
+    /**
+     * Return info string for ticket
+     * <flightNo> (<departureAirport>/<arrivalAirport>) @<row><seat> <lastname>,
+     * <firstname> <cancelled ? "[CANCELLED]" : "">
+     */
+    String getTicketInfo() {
+        String cancelledStatus = cancelled ? " [CANCELLED]" : "";
+        return flight.flightNo + " (" + flight.departureAirport + "/" + flight.arrivalAirport + ") @"
+                + (row + 1) + seat + " " + passenger.lastName + ", " + passenger.firstName + cancelledStatus;
+    }
+}class Passenger {
+    int skyId;
+    String firstName;
+    String lastName;
+    int skyPoints;
+    double cashBalance;
+
+    Passenger(int skyId, String firstName, String lastName,
+            int skyPoints, double cashBalance) {
+        this.skyId = skyId;
+        this.firstName = firstName;
+        this.lastName = lastName;
+        this.skyPoints = skyPoints;
+        this.cashBalance = cashBalance;
+    }
+
+    Ticket book(Flight flight, int row, char seat) {
+        if (flight.isOccupied(row, seat)) {
+            return null;
+        }
+
+        double skyPointsCost = flight.costInSkyPoints();
+        boolean purchasedWithSkyPoints = false;
+
+        if (this.skyPoints >= skyPointsCost) {
+            this.skyPoints -= skyPointsCost;
+            purchasedWithSkyPoints = true;
+        } else if (this.cashBalance > flight.cost) {
+            this.cashBalance -= flight.cost;
+        } else {
+            return null;
+        }
+
+        Ticket ticket = new Ticket(this, flight, purchasedWithSkyPoints, row, seat);
+
+        // TODO: Add ticket to flight seatmap.
+        flight.bookSeat(row, seat, ticket);
+
+        return ticket;
+    }
+}import java.time.*;
+
+class Flight {
+
+    String flightNo; /* Flight Number. E.g. "UAL 2247" */
+    String departureAirport; /* ICAO code, e.g. "KSAN", "EDDF" */
+    String arrivalAirport; /* ICAO code, e.g. "KSAN", "EDDF" */
+    String aircraftType; /* ICAO code, e.g. "B738", "A388" */
+    double cost; /* cost of the ticket. */
     LocalDateTime departureTime;
     LocalDateTime arrivalTime;
-    int maxULDs;
-    int numULDsBooked;
-    int maxWeightLbs;
-    int cargoWeightLbs;
-    double costPerULD;
+    int capacity; /* seating capacity */
 
-    CargoFlight(String flightNo, String departureAirport, String arrivalAirport, String aircraftType,
-                 LocalDateTime departureTime, LocalDateTime arrivalTime, int maxULDs, int maxWeightLbs,
-                 double costPerULD) {
+    // TODO: Create 2D array seatmap
+    int numRows;
+    int seatsPerRow;
+    boolean[][] ticketsBooked;
+
+    public Flight(String flightNo, String departureAirport,
+            String arrivalAirport, String aircraftType,
+            double cost, LocalDateTime departureTime,
+            LocalDateTime arrivalTime, int numRows, int seatsPerRow) {
         this.flightNo = flightNo;
         this.departureAirport = departureAirport;
         this.arrivalAirport = arrivalAirport;
         this.aircraftType = aircraftType;
+        this.cost = cost;
         this.departureTime = departureTime;
         this.arrivalTime = arrivalTime;
-        this.maxULDs = maxULDs;
-        this.maxWeightLbs = maxWeightLbs;
-        this.costPerULD = costPerULD;
+
+        // TODO: Calculate capacity
+        this.capacity = numRows * seatsPerRow;
+
+        // TODO: Initialize 2D array seat map.
+        this.ticketsBooked = new boolean[numRows][seatsPerRow];
+
     }
 
-    public String getFlightPlanString() {
-        return flightNo + ": " + departureAirport + "/" + arrivalAirport + " " + aircraftType +
-                " ULD" + numULDsBooked + "/" + maxULDs + " WT" + cargoWeightLbs + "/" + maxWeightLbs;
-    }
-
-    public boolean isFull() {
-        return numULDsBooked == maxULDs || cargoWeightLbs == maxWeightLbs;
-    }
-
-    public boolean isPassengerFlight() {
-        return false;
-    }
-}
-
-class Shipment implements Booking {
-    Client client;
-    CargoFlight flight;
-    int weightLbs;
-    LocalDateTime purchaseTime;
-    LocalDateTime cancelDeadline;
-    boolean cancelled;
-
-    Shipment(Client client, CargoFlight flight, int weightLbs) {
-        this.client = client;
-        this.flight = flight;
-        this.weightLbs = weightLbs;
-        this.purchaseTime = LocalDateTime.now();
-        this.cancelDeadline = flight.departureTime.minusDays(3);
-        this.cancelled = false;
-    }
-    public boolean cancel() {
-        if (cancelled) {
-           return true;  
-         }
-
-        if (LocalDateTime.now().isAfter(cancelDeadline)) {
-            return false;
-        }
-
-        double refundAmount = flight.costPerULD * weightLbs;
-
-        client.cashBalance += refundAmount;  
-        flight.numULDsBooked -= 1;          
-        flight.cargoWeightLbs -= weightLbs;  
-        cancelled = true;                   // Mark the shipment as canceled
-        return true;
-}
-}
-class Client implements User {
-    int userId;
-    String name;
-    double cashBalance;
-
-    Client(int userId, String name, double cashBalance) {
-        this.userId = userId;
-        this.name = name;
-        this.cashBalance = cashBalance;
-    }
-
-    public String getUserInfoString() {
-        return name + " [" + userId + "] Current balance: " + cashBalance;
-    }
-
-    public boolean isPassenger() {
-        return false;
-    }
-
-    public Shipment book(CargoFlight flight, int weightLbs) {
-        if (flight.numULDsBooked >= flight.maxULDs || flight.cargoWeightLbs + weightLbs > flight.maxWeightLbs || cashBalance < flight.costPerULD) {
-            return null;
-        }
-
-        cashBalance -= flight.costPerULD;
-        flight.numULDsBooked++;
-        flight.cargoWeightLbs += weightLbs;
-        return new Shipment(this, flight, weightLbs);
-    }
-}import java.time.*;
-
-/**
- * IMPORTANT
- * Test cases will be manually reviewed by course staff
- * and are worth 20% of your PA 4 grade.
- * Please make sure you have good coverage.
- */
-
-public class CargoTests {
-
-    public static void main(String[] args) {
-        testShipmentCancel();
-        testClientBook();
-    }
-
-    public static void testShipmentCancel() {
-        System.out.println("Testing Shipment cancel method...");
-
-        Shipment shipment1 = createShipment();
-        shipment1.cancel();
-        if (shipment1.cancel()) {
-            System.out.println("Test 1: Shipment already canceled - Pass");
-        } else {
-            System.out.println("Test 1: Shipment already canceled - Fail");
-        }
-
-        Shipment shipment2 = createShipment();
-        shipment2.setCancelDeadline(LocalDateTime.now().minusDays(2));
-        if (!shipment2.cancel()) {
-            System.out.println("Test 2: Shipment canceled past deadline - Pass");
-        } else {
-            System.out.println("Test 2: Shipment canceled past deadline - Fail");
-        }
-
-        Shipment shipment3 = createShipment();
-        double initialClientBalance = shipment3.getClient().getCashBalance();
-        int initialULDsBooked = shipment3.getFlight().getNumULDsBooked();
-        int initialCargoWeight = shipment3.getFlight().getCargoWeightLbs();
-
-        if (shipment3.cancel()) {
-            double refundAmount = shipment3.getFlight().getCostPerULD();
-            double expectedClientBalance = initialClientBalance + refundAmount;
-            int expectedULDsBooked = initialULDsBooked - 1;
-            int expectedCargoWeight = initialCargoWeight - shipment3.getWeightLbs();
-
-            if (Math.abs(shipment3.getClient().getCashBalance() - expectedClientBalance) < 1e-6 &&
-                shipment3.getFlight().getNumULDsBooked() == expectedULDsBooked &&
-                shipment3.getFlight().getCargoWeightLbs() == expectedCargoWeight) {
-                System.out.println("Test 3: Normal Shipment Cancellation - Pass");
-            } else {
-                System.out.println("Test 3: Normal Shipment Cancellation - Fail");
+    boolean bookSeat(int row, char seat, Ticket ticket) {
+        // Check if the seat is valid
+        if (row >= 0 && row < numRows && seat >= 'A' && seat < 'A' + seatsPerRow) {
+            // Book the seat
+            int columnIndex = seat - 'A';
+            if (!ticketsBooked[row][columnIndex]) {
+                ticketsBooked[row][columnIndex] = true;
+                return true; // Seat successfully booked
             }
-        } else {
-            System.out.println("Test 3: Normal Shipment Cancellation - Fail");
         }
+        return false; 
     }
 
-    public static void testClientBook() {
-        System.out.println("Testing Client book method...");
+    double costInSkyPoints() {
+        return this.cost * 100;
+    }
 
-        CargoFlight flight1 = createCargoFlight(5, 10000, 1000.0);
-        flight1.setNumULDsBooked(flight1.getMaxULDs());
-        Client client1 = createClient(500.0);
-        Shipment shipment1 = client1.book(flight1, 500);
+    boolean isOccupied(int row, char seat) {
+        if (row < 0 || row >= numRows || seat < 'A' || seat >= 'A' + seatsPerRow) {
+        }return false; // TODO
+    }
 
-        if (shipment1 == null) {
-            System.out.println("Test 1: Booking with no ULDs left - Pass");
-        } else {
-            System.println("Test 1: Booking with no ULDs left - Fail");
-        }
+    int getNumBooked() {
+       int numBooked = 0;
 
-        CargoFlight flight2 = createCargoFlight(5, 10000, 1000.0);
-        flight2.setCargoWeightLbs(flight2.getMaxWeightLbs());
-        Client client2 = createClient(5000.0);
-        Shipment shipment2 = client2.book(flight2, 1500);
-
-        if (shipment2 == null) {
-            System.out.println("Test 2: Booking exceeding cargo weight capacity - Pass");
-        } else {
-            System.out.println("Test 2: Booking exceeding cargo weight capacity - Fail");
-        }
-
-        CargoFlight flight3 = createCargoFlight(5, 10000, 1000.0);
-        Client client3 = createClient(500.0);
-        Shipment shipment3 = client3.book(flight3, 1000);
-
-        if (shipment3 == null) {
-            System.out.println("Test 3: Booking with insufficient cash balance - Pass");
-        } else {
-            System.out.println("Test 3: Booking with insufficient cash balance - Fail");
-        }
-
-        CargoFlight flight4 = createCargoFlight(5, 10000, 1000.0);
-        Client client4 = createClient(5000.0);
-        int initialULDsBooked = flight4.getNumULDsBooked();
-        int initialCargoWeight = flight4.getCargoWeightLbs();
-        double initialClientBalance = client4.getCashBalance();
-
-        Shipment shipment4 = client4.book(flight4, 500);
-
-        if (shipment4 != null) {
-            double costPerULD = flight4.getCostPerULD();
-            double expectedClientBalance = initialClientBalance - costPerULD;
-            int expectedULDsBooked = initialULDsBooked + 1;
-            int expectedCargoWeight = initialCargoWeight + 500;
-
-            if (Math.abs(client4.getCashBalance() - expectedClientBalance) < 1e-6 &&
-                flight4.getNumULDsBooked() == expectedULDsBooked &&
-                flight4.getCargoWeightLbs() == expectedCargoWeight) {
-                System.out.println("Test 4: Successful booking - Pass");
-            } else {
-                System.out.println("Test 4: Successful booking - Fail");
+        // Traverse the 2D array with a nested for-loop
+        for (int row = 0; row < numRows; row++) {
+            for (int column = 0; column < seatsPerRow; column++) {
+                if (ticketsBooked[row][column] ) {
+                    numBooked++;
+                }
             }
-        } else {
-            System.out.println("Test 4: Successful booking - Fail");
+        }
+
+        return numBooked;
+    } // TODO
+
+    boolean isFull() {
+        return getNumBooked() >= capacity;
+    }
+
+    /**
+     * Get Flight Plan Info String
+     * "<flightNo>: <departureAirport>/<arrivalAirport> <aircraftType>
+     * <getNumBooked()>/<capacity>"
+     */
+    String getFlightPlanInfo() {
+        return flightNo + ": " + departureAirport + "/" + arrivalAirport + " " +
+               aircraftType + " " + getNumBooked() + "/" + capacity;
+    }
+}
+import tester.*;
+
+import java.time.LocalDateTime;
+
+class FlightTests {
+    /**************************************************************************
+     * 
+     * Flight class tests
+     * 
+     *************************************************************************/
+
+    boolean testCostInSkyPoints(Tester t) {
+        Flight f = new Flight(
+                "CA 987",
+                "ZBAA",
+                "KLAX",
+                "B77W",
+                1000.0,
+                LocalDateTime.now(),
+                LocalDateTime.now().plusHours(13),
+                30, 10);
+
+        return t.checkExpect(f.costInSkyPoints(), 100000.0);
+    }
+
+    boolean testIsOccupied(Tester t) {
+        Flight f = new Flight(
+                "CA 987",
+                "ZBAA",
+                "KLAX",
+                "B77W",
+                1000.0,
+                LocalDateTime.now(),
+                LocalDateTime.now().plusHours(13),
+                30, 10);
+        Passenger p = new Passenger(1000, "Frodo", "Baggins", 1000, 10000.0);
+
+        // set seat 4D to be occupied
+        // because our system is zero-indexed, seat "4D" would be (3, 'D').
+        f.ticketsBooked[3][3] = true;
+        // f.ticketsBooked[3][3] = new Ticket(p, f, false, 3, 'D');
+
+        return t.checkExpect(f.isOccupied(3, 'D'), true)
+                && t.checkExpect(f.isOccupied(4, 'A'), false);
+
+        
+    }
+
+    /**
+     * Test that Flight.isOccupied returns `true` for all out of bound
+     * seat indexes.
+     */
+       boolean testBookSeat(Tester t) {
+        Flight f = new Flight(
+                "CA 987",
+                "ZBAA",
+                "KLAX",
+                "B77W",
+                1000.0,
+                LocalDateTime.now(),
+                LocalDateTime.now().plusHours(13),
+                30, 10);
+        Passenger p = new Passenger(1000, "Frodo", "Baggins", 1000, 10000.0);
+
+        // Book a seat
+        Ticket ticket = new Ticket(p, f, false, 3, 'D');
+        boolean result = f.bookSeat(3, 'D', ticket);
+
+        return t.checkExpect(result, true);
+    }
+
+    boolean testIsOccupiedOutOfBounds(Tester t) {
+        Flight f = new Flight(
+                "CA 987",
+                "ZBAA",
+                "KLAX",
+                "B77W",
+                1000.0,
+                LocalDateTime.now(),
+                LocalDateTime.now().plusHours(13),
+                30, 10);
+
+        return t.checkExpect(f.isOccupied(100, 'A'), true)
+                && t.checkExpect(f.isOccupied(3, 'Z'), true)
+                && t.checkExpect(f.isOccupied(-2, 'a'), true)
+                && t.checkExpect(f.isOccupied(30, 'A'), true) // valid = 0-29
+                && t.checkExpect(f.isOccupied(20, 'K'), true); // valid = 'A'-'J'
+    }
+
+    /**
+     * Flight.getNumBooked()
+     */
+    boolean testGetNumBooked(Tester t) {
+        Flight f = new Flight(
+            "TestFlight",
+            "DEP",
+            "ARR",
+            "TEST",
+            100.0,
+            LocalDateTime.now(),
+            LocalDateTime.now().plusHours(4),
+            3,
+            4);
+
+        f.ticketsBooked[0][0] = true;
+        f.ticketsBooked[1][1] = true;
+        f.ticketsBooked[2][2] = true;
+
+        return t.checkExpect(f.getNumBooked(), 3);
+    } // TODo
+
+    /**
+     * Flight.isFull()
+     */
+    boolean testIsFull(Tester t) {
+        Flight f = new Flight(
+            "TestFlight",
+            "DEP",
+            "ARR",
+            "TEST",
+            100.0,
+            LocalDateTime.now(),
+            LocalDateTime.now().plusHours(4),
+            2,
+            2);
+
+    // Assume all seats are booked
+    for (int row = 0; row < f.numRows; row++) {
+        for (int column = 0; column < f.seatsPerRow; column++) {
+            f.ticketsBooked[row][column] = true;
         }
     }
+    return t.checkExpect(f.isFull(), true);
+}// TODO
 
-    // Helper methods for creating objects
-    private static Shipment createShipment() {
-        CargoFlight flight = createCargoFlight(5, 10000, 1000.0);
-        Client client = createClient(5000.0);
-        return new Shipment(client, flight, 500);
+
+    /**
+     * Flight.getFlightPlanInfo()
+     */
+    boolean testGetFlightPlanInfo(Tester t) {
+        Flight f = new Flight(
+            "TestFlight",
+            "DEP",
+            "ARR",
+            "TEST",
+            100.0,
+            LocalDateTime.now(),
+            LocalDateTime.now().plusHours(4),
+            3,
+            4);
+
+    // Assume some seats are booked
+    f.ticketsBooked[0][0] = true;
+    f.ticketsBooked[1][1] = true;
+
+    // Expect the flight plan info to be formatted correctly
+    return t.checkExpect(
+            f.getFlightPlanInfo(),
+            "TestFlight: DEP/ARR TEST 2/12"
+    );// TODO
     }
 
-    private static CargoFlight createCargoFlight(int maxULDs, int maxWeightLbs, double costPerULD) {
-        return new CargoFlight("Flight123", "AirportA", "AirportB", "Aircraft123",
-                LocalDateTime.now(), LocalDateTime.now().plusHours(2), maxULDs, maxWeightLbs, costPerULD);
+    /**************************************************************************
+     * 
+     * Passenger class tests
+     * 
+     **************************************************************************/
+
+    /**
+     * Passenger.book(Flight flight, int row, char seat)
+     * when the seat in the parameters is occupied.
+     */
+    boolean testBookWhenOccupied(Tester t) {
+        Flight f = new Flight(
+            "TestFlight",
+            "DEP",
+            "ARR",
+            "TEST",
+            100.0,
+            LocalDateTime.now(),
+            LocalDateTime.now().plusHours(4),
+            2,
+            2);
+
+    // Book a seat in the flight
+    Passenger p = new Passenger(1, "John", "Doe", 100, 500.0);
+    f.ticketsBooked[0][0] = true;
+    Ticket bookedTicket = p.book(f, 0, 'A');
+
+    // Expect the booking to be unsuccessful (seat is already occupied)
+    return t.checkExpect(bookedTicket, null); // TODO
     }
 
-    private static Client createClient(double cashBalance) {
-        return new Client(1, "ClientName", cashBalance);
+    /**
+     * Passenger.book(Flight flight, int row, char seat)
+     * when the booking is successful.
+     */
+    boolean testBookSuccess(Tester t) {
+        Flight f = new Flight(
+            "TestFlight",
+            "DEP",
+            "ARR",
+            "TEST",
+            100.0,
+            LocalDateTime.now(),
+            LocalDateTime.now().plusHours(4),
+            2,
+            2);
+
+    // Book a seat in the flight
+        Passenger p = new Passenger(1, "John", "Doe", 100, 500.0);
+        Ticket bookedTicket = p.book(f, 0, 'A');
+
+    // Expect the booking to be successful
+        return t.checkExpect(bookedTicket != null && bookedTicket.cancelled == false, true); // TODO
     }
-    public void testCancelSuccess() {
-    CargoFlight cargoFlight = new CargoFlight("FDX 123", "KSAN", "KMEM", "Boeing 767-300",
-            LocalDateTime.now(), LocalDateTime.now().plusHours(2), 10, 100000, 150000, 2000.0);
 
-    Client client = new Client(14358, "SoCal Express, Ltd.", 100000.0);
+    /**************************************************************************
+     * 
+     * Ticket class tests
+     * 
+     **************************************************************************/
 
-    Shipment shipment = new Shipment(client, cargoFlight, 100);
+    /*
+     * Ticket.getTicketInfo()
+     */
+    boolean testGetTicketInfo(Tester t) {
+          Flight f = new Flight(
+            "TestFlight",
+            "DEP",
+            "ARR",
+            "TEST",
+            100.0,
+            LocalDateTime.now(),
+            LocalDateTime.now().plusHours(4),
+            2,
+            2);
 
-    boolean result = shipment.cancel();
+    Passenger p = new Passenger(1, "John", "Doe", 100, 500.0);
+    Ticket bookedTicket = p.book(f, 0, 'A');
 
-    double refundAmount = cargoFlight.getCostPerULD() * 100;
-    double expectedClientBalance = 100000.0 + refundAmount;
+    String expectedInfo = "TestFlight (DEP/ARR) @1A Doe, John";
+    return t.checkExpect(bookedTicket.getTicketInfo(), expectedInfo); // TODO
+    }
 
-    assertEquals(expectedClientBalance, client.getCashBalance(), 0.01); // Use an appropriate delta for double comparisons
-}
+    /**
+     * Ticket.cancel()
+     */
+    boolean testCancel(Tester t) {
+        Flight f = new Flight(
+            "TestFlight",
+            "DEP",
+            "ARR",
+            "TEST",
+            100.0,
+            LocalDateTime.now(),
+            LocalDateTime.now().plusHours(4),
+            2,
+            2);
 
+    Passenger p = new Passenger(1, "John", "Doe", 100, 500.0);
+    Ticket bookedTicket = p.book(f, 0, 'A');
+
+    boolean isCancelled = bookedTicket.cancel();
+
+    return t.checkExpect(isCancelled, true);// TODO
+    }
 }
