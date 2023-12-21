@@ -12,4 +12,4 @@ HW2: Shape deformation based on Chamfer loss and curvature loss. Pose estimation
 
 HW3: Novel View Synthesis with NeRF and TensoRF.
 
-
+Hit a star or fork it if you like my works.
