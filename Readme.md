@@ -16,4 +16,4 @@ It includes codes for the following assignments:
 
 * Novel View Synthesis with NeRF and TensoRF.
 
-Hit a star or fork it if you like my works.
+Hit a star if you like my works.
