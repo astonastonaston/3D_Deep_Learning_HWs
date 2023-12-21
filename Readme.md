@@ -8,7 +8,7 @@ He actually didn't do well in some assignments: ICP and PointNet-based pose esti
 
 It includes codes for the following assignments:
 
-HW0 (poorly done though): Basic optimizations and probability. Uniform sampling over triangles
+HW0: Basic optimizations and probability. Uniform sampling over triangles
 
 Hw1: Rotation representations. Differential geometry representations of a surface. Mesh geometry computations. Point Cloud sampling and Gaussian curvatures' computations.
 
