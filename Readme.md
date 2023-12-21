@@ -8,12 +8,12 @@ He actually didn't do well in some assignments: ICP and PointNet-based pose esti
 
 It includes codes for the following assignments:
 
-HW0: Basic optimizations and probability. Uniform sampling over triangles
+* Basic optimizations and probability. Uniform sampling over triangles
 
-Hw1: Rotation representations. Differential geometry representations of a surface. Mesh geometry computations. Point Cloud sampling and Gaussian curvatures' computations.
+* Rotation representations. Differential geometry representations of a surface. Mesh geometry computations. Point Cloud sampling and Gaussian curvatures' computations.
 
-HW2: Shape deformation based on Chamfer loss and curvature loss. Pose estimation based on ICP and (PointNet-like) learning methods.
+* Shape deformation based on Chamfer loss and curvature loss. Pose estimation based on ICP and (PointNet-like) learning methods.
 
-HW3: Novel View Synthesis with NeRF and TensoRF.
+* Novel View Synthesis with NeRF and TensoRF.
 
 Hit a star or fork it if you like my works.
