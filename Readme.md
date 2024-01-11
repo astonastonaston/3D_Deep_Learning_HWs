@@ -10,7 +10,7 @@ It includes codes for the following assignments:
 
 * Basic optimizations and probability. Uniform sampling over triangles
 
-* Rotation representations. Differential geometry representations of a surface. Mesh geometry computations. Point Cloud sampling and Gaussian curvatures' computations.
+* Rotation representations. Differential geometry representations of a surface. Mesh geometry computations. Point Cloud sampling (farthest-point sampling) and Gaussian curvatures' computations.
 
 * Shape deformation based on Chamfer loss and curvature loss.
 
