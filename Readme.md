@@ -12,7 +12,7 @@ It includes codes for the following assignments:
 
 * Rotation representations. Differential geometry representations of a surface. Mesh geometry computations. Point Cloud sampling and Gaussian curvatures' computations.
 
-* Shape deformation based on Chamfer loss and curvature loss. Pose estimation based on ICP and (PointNet-like) learning methods.
+* Shape deformation based on Chamfer loss and curvature loss. 6D Pose estimation based on ICP and (PointNet-like) learning methods.
 
 * Novel View Synthesis with NeRF and TensoRF.
 
